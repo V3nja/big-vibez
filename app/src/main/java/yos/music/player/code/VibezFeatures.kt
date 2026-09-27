@@ -105,7 +105,7 @@ object VibezEq {
         val hi: Short = r[1]
         lo to hi
     } catch (_: Throwable) {
-        -1500 to 1500
+        (-1500).toShort() to 1500.toShort()
     }
 
     fun setBand(band: Int, v: Float) {

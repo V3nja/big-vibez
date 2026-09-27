@@ -281,6 +281,8 @@ fun NormalMusic(navController: NavController) {
             // at the top of the scroll content; no pull-to-reveal.
 
             Box(Modifier.fillMaxSize()) {
+                VibezSelectionBar(allItems = list.value)
+
                 if (activePlayList == null) {
                     YosWrapper {
                         FloatingMenu({ expanded.value }, {
@@ -640,8 +642,6 @@ fun NormalMusic(navController: NavController) {
                                 )
                             }
                         } else {
-                            VibezSelectionBar(allItems = list.value)
-
                             itemsIndexed(
                                 list.value,
                                 key = { index, music -> music.lazyListKey(index) },
