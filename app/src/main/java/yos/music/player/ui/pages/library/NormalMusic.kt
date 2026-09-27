@@ -195,9 +195,10 @@ fun NormalMusic(navController: NavController) {
                 }
             }
         } else {
+            val vibezCtx = LocalContext.current
             val useSearch = remember { derivedStateOf { searchText.value.isNotEmpty() } }
             val list: MutableState<List<YosMediaItem>> = remember(activePlayList?.listID) {
-                mutableStateOf(if (activePlayList != null) musicList else VibezBlacklist.filter(musicList).sortX())
+                mutableStateOf(if (activePlayList != null) musicList else VibezBlacklist.filter(vibezCtx, musicList).sortX())
             }
 
             YosWrapper {
@@ -245,7 +246,7 @@ fun NormalMusic(navController: NavController) {
                                 }.toList()
                             }
                         } else {
-                            VibezBlacklist.filter(musicList)
+                            VibezBlacklist.filter(vibezCtx, musicList)
                         }
                         if (activePlayList != null) {
                             // FR-S-07: relevance ranking overrides

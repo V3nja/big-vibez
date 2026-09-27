@@ -1,6 +1,7 @@
 package yos.music.player.code
 
 import android.content.Context
+import android.provider.MediaStore
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import yos.music.player.data.libraries.PlayListLibrary
 import yos.music.player.data.libraries.PlayListLibrary.applyEdits
@@ -38,7 +40,9 @@ object VibezSmart {
             val byUri = library.associateBy { it.uri?.toString() }
             val most = countBy.entries.sortedByDescending { it.value }
                 .take(50).mapNotNull { byUri[it.key] }
-            val recent = library.sortedByDescending { it.date }.take(50)
+            val recent = library
+                .sortedByDescending { it.addDate ?: it.modifiedDate ?: 0L }
+                .take(50)
             val never = library.filter { m ->
                 m.uri?.toString()?.let { countBy.containsKey(it) } != true
             }
@@ -71,22 +75,56 @@ object VibezBlacklist {
         SettingsLibrary.vibezBlacklist = cur.joinToString("|")
     }
 
-    fun filter(list: List<YosMediaItem>): List<YosMediaItem> {
-        val b = blocked
-        return if (b.isEmpty()) list else list.filter { m -> b.none { m.path.startsWith(it) } }
+    private fun pathsOf(context: Context): Map<String, String> {
+        val out = HashMap<String, String>()
+        try {
+            context.contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.DATA),
+                null, null, null,
+            )?.use { c ->
+                val idCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                val dataCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+                while (c.moveToNext()) {
+                    val p = c.getString(dataCol) ?: continue
+                    out[c.getString(idCol)] = p
+                }
+            }
+        } catch (_: Throwable) {
+        }
+        return out
     }
+
+    fun filter(context: Context, list: List<YosMediaItem>): List<YosMediaItem> {
+        val b = blocked
+        if (b.isEmpty()) return list
+        val paths = pathsOf(context)
+        return list.filter { m ->
+            val p = m.uri?.lastPathSegment?.let { paths[it] } ?: return@filter true
+            b.none { p.startsWith(it) }
+        }
+    }
+
+    fun foldersOf(context: Context): List<Pair<String, Int>> =
+        pathsOf(context).values
+            .map { it.substringBeforeLast('/') }
+            .filter { it.isNotBlank() }
+            .groupingBy { it }.eachCount()
+            .entries.sortedByDescending { it.value }
+            .map { it.key to it.value }
 }
 
 @Composable
 fun VibezBlacklistDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
     var refresh by remember { mutableStateOf(0) }
-    val library = MediaController.mainMusicList
-    val folders = remember(refresh, library) {
-        library.mapNotNull { it.path.substringBeforeLast('/').takeIf { p -> p.isNotBlank() } }
-            .groupingBy { it }.eachCount()
-            .entries.sortedByDescending { it.value }
+    val folders = remember(refresh) {
+        try {
+            VibezBlacklist.foldersOf(context)
+        } catch (_: Throwable) {
+            emptyList()
+        }
     }
-    LaunchedEffect(Unit) { refresh++ }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Blocked Folders") },
@@ -96,17 +134,17 @@ fun VibezBlacklistDialog(onDismiss: () -> Unit) {
             } else {
                 LazyColumn(modifier = Modifier.height(320.dp)) {
                     items(folders) { f ->
-                        val isBlocked = f.key in VibezBlacklist.blocked
+                        val isBlocked = f.first in VibezBlacklist.blocked
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = f.key.substringAfterLast('/') + "  (${f.value})",
+                                text = f.first.substringAfterLast('/') + "  (${f.second})",
                                 modifier = Modifier.weight(1f),
                             )
                             TextButton(onClick = {
-                                VibezBlacklist.toggle(f.key)
+                                VibezBlacklist.toggle(f.first)
                                 refresh++
                             }) {
                                 Text(if (isBlocked) "Unblock" else "Block")
