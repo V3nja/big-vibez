@@ -24,5 +24,5 @@ infix fun Color.withNight(nightColor: Color): Color {
 
 @Composable
 fun isFlamingoInDarkMode(): Boolean {
-    return if (SettingsLibrary.CustomTheme == "Auto") isSystemInDarkTheme() else SettingsLibrary.CustomTheme == "Dark"
+    return if (SettingsLibrary.CustomTheme == "Auto" || SettingsLibrary.CustomTheme == "Material You") isSystemInDarkTheme() else SettingsLibrary.CustomTheme == "Dark"
 }

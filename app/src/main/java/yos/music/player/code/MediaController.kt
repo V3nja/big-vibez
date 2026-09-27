@@ -1263,6 +1263,7 @@ class YosPlaybackService : MediaSessionService() {
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
+        VibezEq.attach(player.audioSessionId)
 
         val forwardingPlayer = object : ForwardingPlayer(player) {
             override fun play() {

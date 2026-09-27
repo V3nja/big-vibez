@@ -41,7 +41,8 @@ fun UserInterfaceSetting(navController: NavController) =
                                 items = listOf(
                                     "Auto",
                                     "Dark",
-                                    "Light"
+                                    "Light",
+                                    "Material You"
                                 ),
                                 value = SettingsLibrary.CustomTheme,
                                 onValueChange = {

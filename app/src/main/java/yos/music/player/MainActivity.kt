@@ -186,7 +186,7 @@ class MainActivity : BaseActivity() {
         installSplashScreen()
         enableEdgeToEdge()
         setContent {
-            YosMusicTheme {
+            YosMusicTheme(dynamicColor = SettingsLibrary.CustomTheme == "Material You") {
                 ProvideWindowInsets {
                     val context = LocalContext.current
                     val density = LocalDensity.current

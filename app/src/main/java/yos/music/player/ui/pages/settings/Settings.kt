@@ -21,6 +21,9 @@ import yos.music.player.R
 import yos.music.player.code.MediaController
 import yos.music.player.data.libraries.MusicLibrary
 import yos.music.player.data.libraries.SettingsLibrary
+import yos.music.player.code.VibezEqualizerSheet
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import yos.music.player.ui.UI
 import yos.music.player.ui.toUI
 import yos.music.player.ui.widgets.basic.RoundColumn
@@ -37,6 +40,8 @@ fun Settings(navController: NavController) =
             content = {
                 item("settings") {
                     Column(Modifier.fillMaxSize()) {
+                        val showVibezEq = remember("vibez_eq_sheet") { mutableStateOf(false) }
+                        if (showVibezEq.value) VibezEqualizerSheet { showVibezEq.value = false }
                         // GroupSpacerMedium()
                         ListHeader(stringResource(id = R.string.page_library_title))
                         RoundColumn {
@@ -124,7 +129,8 @@ fun Settings(navController: NavController) =
                         GroupSpacer()
                         ListHeader(stringResource(id = R.string.settings_audio))
                         RoundColumn {
-                            LabelItem(title = stringResource(id = R.string.settings_audio_exoplayer)) {
+                            LabelItem(title = "Equalizer (V3NJA)") { showVibezEq.value = true }
+                        LabelItem(title = stringResource(id = R.string.settings_audio_exoplayer)) {
                                 navController.toUI(UI.Settings.ExoplayerSetting)
                             }
                             Divider()

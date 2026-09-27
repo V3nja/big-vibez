@@ -1,4 +1,7 @@
 package yos.music.player.ui.pages.library
+import yos.music.player.code.VibezSelection
+import yos.music.player.code.VibezSelectionBar
+import yos.music.player.code.VibezCheckIcon
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
@@ -637,6 +640,8 @@ fun NormalMusic(navController: NavController) {
                                 )
                             }
                         } else {
+                            VibezSelectionBar(allItems = list.value)
+
                             itemsIndexed(
                                 list.value,
                                 key = { index, music -> music.lazyListKey(index) },
@@ -644,12 +649,23 @@ fun NormalMusic(navController: NavController) {
                             ) { index, music ->
                                 MusicList(
                                     music = music,
+                                    showArtwork = !VibezSelection.picked.contains(music.uri),
+                                    leadingContent = if (VibezSelection.active) {
+                                        { VibezCheckIcon(selected = VibezSelection.picked.contains(music.uri)) }
+                                    } else {
+                                        null
+                                    },
                                     onQueueSwipe = {
                                         MediaController.addToQueue(music)
                                     },
                                     navController = navController,
+                                    itemLongClick = {
+                                        if (VibezSelection.active) VibezSelection.toggle(music.uri)
+                                        else VibezSelection.enter(music.uri)
+                                    },
                                 ) {
-                                    scope.launch(Dispatchers.IO) {
+                                    if (VibezSelection.active) VibezSelection.toggle(music.uri)
+                                    else scope.launch(Dispatchers.IO) {
                                         MediaController.prepare(music, list.value)
                                     }
                                 }
@@ -766,15 +782,26 @@ fun NormalMusic(navController: NavController) {
                         ) { index, music ->
                             MusicList(
                                 music = music,
+                                showArtwork = !VibezSelection.picked.contains(music.uri),
+                                leadingContent = if (VibezSelection.active) {
+                                    { VibezCheckIcon(selected = VibezSelection.picked.contains(music.uri)) }
+                                } else {
+                                    null
+                                },
                                 onQueueSwipe = {
                                     MediaController.addToQueue(music)
                                 },
                                 navController = navController,
-                            ) {
-                                scope.launch(Dispatchers.IO) {
+                                itemLongClick = {
+                                    if (VibezSelection.active) VibezSelection.toggle(music.uri)
+                                    else VibezSelection.enter(music.uri)
+                                },
+                                ) {
+                                if (VibezSelection.active) VibezSelection.toggle(music.uri)
+                                else scope.launch(Dispatchers.IO) {
                                     MediaController.prepare(music, list.value)
                                 }
-                            }
+                                }
 
                             if (index < list.value.lastIndex) {
                                 Spacer(
