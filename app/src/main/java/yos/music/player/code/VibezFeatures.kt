@@ -79,7 +79,7 @@ object VibezEq {
         }
     }
 
-    fun setEnabled(b: Boolean) {
+    fun applyEnabled(b: Boolean) {
         enabled = b
         try {
             eq?.enabled = b
@@ -267,7 +267,7 @@ fun VibezEqualizerSheet(onDismiss: () -> Unit) {
                     Text("Equalizer", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Text("V3NJA sound lab", fontSize = 13.sp)
                 }
-                Switch(checked = VibezEq.enabled, onCheckedChange = { VibezEq.setEnabled(it) })
+                Switch(checked = VibezEq.enabled, onCheckedChange = { VibezEq.applyEnabled(it) })
             }
             Spacer(modifier = Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
