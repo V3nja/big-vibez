@@ -22,6 +22,10 @@ import yos.music.player.code.MediaController
 import yos.music.player.data.libraries.MusicLibrary
 import yos.music.player.data.libraries.SettingsLibrary
 import yos.music.player.code.VibezEqualizerSheet
+import yos.music.player.code.VibezTools
+import yos.music.player.code.VibezDupesDialog
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import yos.music.player.ui.UI
@@ -41,6 +45,32 @@ fun Settings(navController: NavController) =
                 item("settings") {
                     Column(Modifier.fillMaxSize()) {
                         val showVibezEq = remember("vibez_eq_sheet") { mutableStateOf(false) }
+                        val showDupes = remember("vibez_dupes") { mutableStateOf(false) }
+                        val vscope = rememberCoroutineScope()
+                        val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+                            if (uri != null) {
+                                vscope.launch(Dispatchers.IO) {
+                                    try {
+                                        context.contentResolver.openOutputStream(uri)?.use { it.write(VibezTools.exportJson().toByteArray()) }
+                                        withContext(Dispatchers.Main) { Toast.makeText(context, "Big Vibez backup saved", Toast.LENGTH_SHORT).show() }
+                                    } catch (_: Throwable) { }
+                                }
+                            }
+                        }
+                        val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                            if (uri != null) {
+                                vscope.launch(Dispatchers.IO) {
+                                    try {
+                                        val text = context.contentResolver.openInputStream(uri)?.use { String(it.readBytes()) } ?: ""
+                                        val n = VibezTools.importJson(text)
+                                        withContext(Dispatchers.Main) { Toast.makeText(context, "Restored $n playlists", Toast.LENGTH_SHORT).show() }
+                                    } catch (_: Throwable) {
+                                        withContext(Dispatchers.Main) { Toast.makeText(context, "Not a valid Big Vibez backup", Toast.LENGTH_SHORT).show() }
+                                    }
+                                }
+                            }
+                        }
+                        if (showDupes.value) VibezDupesDialog { showDupes.value = false }
                         if (showVibezEq.value) VibezEqualizerSheet { showVibezEq.value = false }
                         // GroupSpacerMedium()
                         ListHeader(stringResource(id = R.string.page_library_title))
@@ -142,6 +172,17 @@ fun Settings(navController: NavController) =
                             )
                         }
                         ListHeader(content = stringResource(id = R.string.settings_audio_fade_in_out_desc))
+
+                        GroupSpacer()
+                        ListHeader("V3NJA Tools")
+                        RoundColumn {
+                            LabelItem(title = "Backup Playlists") { backupLauncher.launch("big-vibez-backup.json") }
+                            Divider()
+                            LabelItem(title = "Restore Playlists") { restoreLauncher.launch(arrayOf("application/json", "*/*")) }
+                            Divider()
+                            LabelItem(title = "Find Duplicate Songs") { showDupes.value = true }
+                        }
+                        ListHeader("Backups save your playlists to a file you can restore anytime.")
 
                         GroupSpacer()
                         ListHeader(stringResource(id = R.string.settings_play))
