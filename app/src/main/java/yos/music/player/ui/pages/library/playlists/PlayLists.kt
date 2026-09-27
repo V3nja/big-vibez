@@ -1,5 +1,9 @@
 package yos.music.player.ui.pages.library.playlists
 
+import yos.music.player.code.VibezSmart
+
+import yos.music.player.code.ListenStatsManager
+
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -126,6 +130,10 @@ fun PlayLists(navController: NavController) {
     val unpinned = playLists.filter { !it.isPinned }.sortedBy { it.name }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    LaunchedEffect(ListenStatsManager.statsEvents.value) {
+        VibezSmart.sync(context, MediaController.mainMusicList)
+    }
     val keyboardController = LocalSoftwareKeyboardController.current
     val listState = rememberLazyListState()
     val searchText = remember { mutableStateOf("") }

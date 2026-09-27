@@ -24,6 +24,7 @@ import yos.music.player.data.libraries.SettingsLibrary
 import yos.music.player.code.VibezEqualizerSheet
 import yos.music.player.code.VibezTools
 import yos.music.player.code.VibezDupesDialog
+import yos.music.player.code.VibezBlacklistDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ fun Settings(navController: NavController) =
                     Column(Modifier.fillMaxSize()) {
                         val showVibezEq = remember("vibez_eq_sheet") { mutableStateOf(false) }
                         val showDupes = remember("vibez_dupes") { mutableStateOf(false) }
+                        val showBlacklist = remember("vibez_block") { mutableStateOf(false) }
                         val vscope = rememberCoroutineScope()
                         val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
                             if (uri != null) {
@@ -71,6 +73,7 @@ fun Settings(navController: NavController) =
                             }
                         }
                         if (showDupes.value) VibezDupesDialog { showDupes.value = false }
+                        if (showBlacklist.value) VibezBlacklistDialog { showBlacklist.value = false }
                         if (showVibezEq.value) VibezEqualizerSheet { showVibezEq.value = false }
                         // GroupSpacerMedium()
                         ListHeader(stringResource(id = R.string.page_library_title))
@@ -181,6 +184,8 @@ fun Settings(navController: NavController) =
                             LabelItem(title = "Restore Playlists") { restoreLauncher.launch(arrayOf("application/json", "*/*")) }
                             Divider()
                             LabelItem(title = "Find Duplicate Songs") { showDupes.value = true }
+                            Divider()
+                            LabelItem(title = "Blocked Folders") { showBlacklist.value = true }
                         }
                         ListHeader("Backups save your playlists to a file you can restore anytime.")
 

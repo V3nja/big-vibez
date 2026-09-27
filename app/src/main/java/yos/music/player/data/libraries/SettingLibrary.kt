@@ -54,6 +54,13 @@ object SettingsLibrary {
         initialValue = true
     )
 
+    @Stable
+    var vibezBlacklist by mutableDataSaverStateOf(
+        dataSaverInterface = SettingsSaver,
+        key = "vibez_blocked_folders",
+        initialValue = ""
+    )
+
     /**
      * 应用主题
      */

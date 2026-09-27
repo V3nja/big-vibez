@@ -1,5 +1,6 @@
 package yos.music.player.ui.pages.library
 import yos.music.player.code.VibezSelection
+import yos.music.player.code.VibezBlacklist
 import yos.music.player.code.VibezSelectionBar
 import yos.music.player.code.VibezCheckIcon
 
@@ -196,7 +197,7 @@ fun NormalMusic(navController: NavController) {
         } else {
             val useSearch = remember { derivedStateOf { searchText.value.isNotEmpty() } }
             val list: MutableState<List<YosMediaItem>> = remember(activePlayList?.listID) {
-                mutableStateOf(if (activePlayList != null) musicList else musicList.sortX())
+                mutableStateOf(if (activePlayList != null) musicList else VibezBlacklist.filter(musicList).sortX())
             }
 
             YosWrapper {
@@ -219,6 +220,7 @@ fun NormalMusic(navController: NavController) {
                     musicList,
                     PlayListSortPreference.sort,
                     PlayListSortPreference.descending,
+                    VibezBlacklist.blocked,
                 ) {
                     if (activePlayList != null && useSearch.value) {
                         // Debounce typing — FR-S-08.
@@ -243,7 +245,7 @@ fun NormalMusic(navController: NavController) {
                                 }.toList()
                             }
                         } else {
-                            musicList
+                            VibezBlacklist.filter(musicList)
                         }
                         if (activePlayList != null) {
                             // FR-S-07: relevance ranking overrides
