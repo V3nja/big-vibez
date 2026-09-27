@@ -120,6 +120,7 @@ fun /*LazyItemScope.*/MusicList(
     trailingContent: (@Composable (RowScope.() -> Unit))? = null,
     onQueueSwipe: (suspend () -> Boolean)? = null,
     navController: NavController? = null,
+    vibezLongPress: (() -> Unit)? = null,
     itemClick: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -266,7 +267,7 @@ fun /*LazyItemScope.*/MusicList(
             horizontalPadding = horizontalPadding,
             leadingContent = leadingContent,
             trailingContent = trailingContent,
-            itemLongClick = if (navController != null) {
+            itemLongClick = vibezLongPress ?: if (navController != null) {
                 {
                     contextMenuOpen.value = true
                 }

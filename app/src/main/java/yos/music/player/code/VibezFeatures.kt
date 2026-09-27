@@ -101,14 +101,14 @@ object VibezEq {
 
     private fun range(): Pair<Short, Short> = try {
         val r = eq!!.bandLevelRange
-        r.first to r.second
+        r[0] to r[1]
     } catch (_: Throwable) {
         -1500 to 1500
     }
 
     fun setBand(band: Int, v: Float) {
         val (lo, hi) = range()
-        val level = (v * hi).toShort().coerceIn(lo, hi)
+        val level = (v * hi).toInt().toShort().coerceIn(lo, hi)
         levels = levels + (band to v)
         try {
             eq?.setBandLevel(band.toShort(), level)
@@ -189,7 +189,7 @@ fun VibezSelectionBar(allItems: List<YosMediaItem>) {
                             val uris = VibezSelection.picked.toList()
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                 try {
-                                    val req = MediaStore.createDeleteRequest(context, uris)
+                                    val req = MediaStore.createDeleteRequest(context.contentResolver, uris)
                                     deleteLauncher.launch(
                                         IntentSenderRequest.Builder(req.intentSender).build()
                                     )

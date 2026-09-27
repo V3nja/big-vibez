@@ -2,6 +2,7 @@ package yos.music.player.ui.pages.library
 import yos.music.player.code.VibezSelection
 import yos.music.player.code.VibezSelectionBar
 import yos.music.player.code.VibezCheckIcon
+import androidx.compose.runtime.Composable
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
@@ -647,19 +648,21 @@ fun NormalMusic(navController: NavController) {
                                 key = { index, music -> music.lazyListKey(index) },
                                 contentType = { _, _ -> "MusicList_item" },
                             ) { index, music ->
-                                MusicList(
-                                    music = music,
-                                    showArtwork = !VibezSelection.picked.contains(music.uri),
-                                    leadingContent = if (VibezSelection.active) {
+                                val vibezLeading: (@Composable () -> Unit)? =
+                                    if (VibezSelection.active) {
                                         { VibezCheckIcon(selected = VibezSelection.picked.contains(music.uri)) }
                                     } else {
                                         null
-                                    },
+                                    }
+                                MusicList(
+                                    music = music,
+                                    showArtwork = !VibezSelection.picked.contains(music.uri),
+                                    leadingContent = vibezLeading,
                                     onQueueSwipe = {
                                         MediaController.addToQueue(music)
                                     },
                                     navController = navController,
-                                    itemLongClick = {
+                                    vibezLongPress = {
                                         if (VibezSelection.active) VibezSelection.toggle(music.uri)
                                         else VibezSelection.enter(music.uri)
                                     },
@@ -780,28 +783,30 @@ fun NormalMusic(navController: NavController) {
                             key = { index, music -> music.lazyListKey(index) },
                             contentType = { _, _ -> "MusicList_item" },
                         ) { index, music ->
-                            MusicList(
-                                music = music,
-                                showArtwork = !VibezSelection.picked.contains(music.uri),
-                                leadingContent = if (VibezSelection.active) {
+                            val vibezLeading: (@Composable () -> Unit)? =
+                                if (VibezSelection.active) {
                                     { VibezCheckIcon(selected = VibezSelection.picked.contains(music.uri)) }
                                 } else {
                                     null
-                                },
+                                }
+                            MusicList(
+                                music = music,
+                                showArtwork = !VibezSelection.picked.contains(music.uri),
+                                leadingContent = vibezLeading,
                                 onQueueSwipe = {
                                     MediaController.addToQueue(music)
                                 },
                                 navController = navController,
-                                itemLongClick = {
+                                vibezLongPress = {
                                     if (VibezSelection.active) VibezSelection.toggle(music.uri)
                                     else VibezSelection.enter(music.uri)
                                 },
-                                ) {
+                            ) {
                                 if (VibezSelection.active) VibezSelection.toggle(music.uri)
                                 else scope.launch(Dispatchers.IO) {
                                     MediaController.prepare(music, list.value)
                                 }
-                                }
+                            }
 
                             if (index < list.value.lastIndex) {
                                 Spacer(
