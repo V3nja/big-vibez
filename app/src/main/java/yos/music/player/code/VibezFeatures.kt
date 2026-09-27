@@ -101,7 +101,9 @@ object VibezEq {
 
     private fun range(): Pair<Short, Short> = try {
         val r = eq!!.bandLevelRange
-        r[0] to r[1]
+        val lo: Short = r[0]
+        val hi: Short = r[1]
+        lo to hi
     } catch (_: Throwable) {
         -1500 to 1500
     }
