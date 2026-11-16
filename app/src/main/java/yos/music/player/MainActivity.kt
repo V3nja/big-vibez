@@ -152,7 +152,6 @@ import yos.music.player.ui.pages.settings.performance.LyricSetting
 import yos.music.player.ui.pages.settings.performance.NotificationSetting
 import yos.music.player.ui.pages.settings.performance.userinterface.AnimatedAlbumCoverBlacklistSetting
 import yos.music.player.ui.pages.settings.performance.userinterface.AnimatedAlbumCoversSetting
-import yos.music.player.ui.pages.settings.performance.userinterface.ScreenCornerSetDialog
 import yos.music.player.ui.pages.settings.performance.userinterface.UserInterfaceSetting
 import yos.music.player.ui.theme.YosMusicTheme
 import yos.music.player.ui.theme.YosRoundedCornerShape
@@ -182,8 +181,26 @@ class MainActivity : BaseActivity() {
         ExperimentalHazeMaterialsApi::class, ExperimentalSharedTransitionApi::class
     )
     override fun onCreate(savedInstanceState: Bundle?) {
+        // SplashScreen compat MUST run before super.onCreate. On API 29 it was
+        // called after, so postSplashScreenTheme never applied and the splash
+        // overlay stayed up — a black screen that never dismissed.
+        // Android 12+ still gets the system splash; we force-remove it on first frame.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            installSplashScreen().apply {
+                setKeepOnScreenCondition { false }
+                setOnExitAnimationListener { it.remove() }
+            }
+        }
         super.onCreate(savedInstanceState)
-        installSplashScreen()
+        // First-run ModalBottomSheet (screen-corner) was a second trap on
+        // Android 10 / HiOS: fullscreen black dialog, back disabled, so
+        // CheckAndRequestPermission never ran. Keep the default 30 and skip it.
+        if (!SettingsLibrary.ScreenCornerSet) {
+            SettingsLibrary.ScreenCornerSet = true
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            SettingsLibrary.BarBlurEffect = false
+        }
         enableEdgeToEdge()
         setContent {
             YosMusicTheme(dynamicColor = SettingsLibrary.CustomTheme == "Material You") {
@@ -193,9 +210,11 @@ class MainActivity : BaseActivity() {
 
                     LaunchedEffect(Unit) {
                         withFrameNanos {}
-                        MediaController.ensureInitialized(context)
-                        ListenHistoryManager.loadHistory()
-                        ListenStatsManager.loadEvents()
+                        runCatching {
+                            MediaController.ensureInitialized(context)
+                            ListenHistoryManager.loadHistory()
+                            ListenStatsManager.loadEvents()
+                        }
                     }
 
                     val offsetY = remember("MainActivity_offsetY") { Animatable(0f) }
@@ -683,18 +702,7 @@ class MainActivity : BaseActivity() {
 
                             // 弹窗
                             YosWrapper {
-                                val showCornerSetDialog =
-                                    remember("MainActivity_showCornerSetDialog") {
-                                        mutableStateOf(!SettingsLibrary.ScreenCornerSet)
-                                    }
-
-                                if (showCornerSetDialog.value) {
-                                    ScreenCornerSetDialog {
-                                        showCornerSetDialog.value = false
-                                    }
-                                } else {
-                                    CheckAndRequestPermission()
-                                }
+                                CheckAndRequestPermission()
                             }
                         }
 

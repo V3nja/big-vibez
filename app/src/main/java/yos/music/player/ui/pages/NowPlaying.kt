@@ -63,6 +63,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -147,6 +148,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import yos.music.player.R
+import yos.music.player.code.ListenHistoryManager
 import yos.music.player.code.MediaController
 import yos.music.player.code.MediaController.mediaControl
 import yos.music.player.code.MediaController.musicPlaying
@@ -161,6 +163,7 @@ import yos.music.player.code.utils.others.Vibrator
 import yos.music.player.code.utils.player.FadeExo.fadePause
 import yos.music.player.code.utils.player.FadeExo.fadePlay
 import yos.music.player.data.libraries.FavPlayListLibrary
+import yos.music.player.data.libraries.MusicLibrary
 import yos.music.player.data.libraries.SettingsLibrary
 import yos.music.player.data.libraries.YosMediaItem
 import yos.music.player.data.libraries.artistsList
@@ -904,142 +907,66 @@ private fun PlayingList(
                 }
             }
 
+            val autoplayOn = SettingsLibrary.AutoplaySimilar
+            val repeatHighlight =
+                repeatModeLambda() == REPEAT_MODE_ALL || repeatModeLambda() == REPEAT_MODE_ONE
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 30.dp)
-                    .padding(top = 10.dp)
-                    .height(65.dp), verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 8.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.page_library_playlists),
-                        fontSize = 16.5.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier/*.padding(top = 10.dp)*/
-                    )
-                    Text(
-                        text = stringResource(
-                            id = R.string.page_library_playlists_music_total,
-                            nextInQueueList.value.size + (musicList.value?.size ?: 0)
-                        ),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier
-                            .padding(top = 2.dp)
-                            .overlayEffect()
-                            .alpha(0.35f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier
-                        .overlayEffect()
-                        .alpha(0.6f)
-                ) {
-                    val dp = 36.dp
-                    YosWrapper {
-                        val shuffleBackgroundAlpha =
-                            animateFloatAsState(targetValue = if (shuffleModeEnabledLambda()) 0.9f else 0f)
-                        Box(
-                            modifier = Modifier
-                                .clickable(
-                                    onClick = {
-                                        Vibrator.click(context)
-                                        shuffleModeOnChanged(!shuffleModeEnabledLambda())
-                                        scope.launch(Dispatchers.IO) {
-                                            MediaController.toggleShuffleMode()
-                                        }
-                                    },
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() })
-                                .size(36.dp)
-                                .background(
-                                    Color.White.copy(alpha = shuffleBackgroundAlpha.value),
-                                    shape = YosRoundedCornerShape(10.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            YosWrapper {
-                                val shuffleIconTint =
-                                    animateColorAsState(targetValue = if (shuffleModeEnabledLambda()) Color.Black else Color.White)
-                                Icon(
-                                    painterResource(id = R.drawable.ic_nowplaying_shuffle),
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(dp),
-                                    tint = shuffleIconTint.value
-                                )
+                NowPlayingModePill(
+                    modifier = Modifier.weight(1f),
+                    highlighted = shuffleModeEnabledLambda(),
+                    icon = R.drawable.ic_nowplaying_shuffle,
+                    contentDescription = stringResource(id = R.string.normal_button_shuffle),
+                    onClick = {
+                        Vibrator.click(context)
+                        shuffleModeOnChanged(!shuffleModeEnabledLambda())
+                        scope.launch(Dispatchers.IO) {
+                            MediaController.toggleShuffleMode()
+                        }
+                    }
+                )
+                NowPlayingModePill(
+                    modifier = Modifier.weight(1f),
+                    highlighted = repeatHighlight,
+                    icon = if (repeatModeLambda() == REPEAT_MODE_ONE) {
+                        R.drawable.ic_nowplaying_repeatone
+                    } else {
+                        R.drawable.ic_nowplaying_repeat
+                    },
+                    contentDescription = null,
+                    onClick = {
+                        Vibrator.click(context)
+                        val targetMode = when (repeatModeLambda()) {
+                            REPEAT_MODE_OFF -> REPEAT_MODE_ALL
+                            REPEAT_MODE_ALL -> REPEAT_MODE_ONE
+                            else -> REPEAT_MODE_OFF
+                        }
+                        mediaControl?.repeatMode = targetMode
+                        mediaControl?.let { YosPlaybackService().setCustomButtons(it) }
+                        repeatModeOnChanged(targetMode)
+                    }
+                )
+                NowPlayingModePill(
+                    modifier = Modifier.weight(1f),
+                    highlighted = autoplayOn,
+                    icon = R.drawable.ic_nowplaying_autoplay,
+                    contentDescription = stringResource(id = R.string.now_playing_autoplay),
+                    onClick = {
+                        Vibrator.click(context)
+                        SettingsLibrary.AutoplaySimilar = !autoplayOn
+                        if (!autoplayOn) {
+                            scope.launch(Dispatchers.IO) {
+                                MediaController.fillAutoplayIfNeeded()
                             }
                         }
                     }
-                    YosWrapper {
-                        val repeatHighlight =
-                            repeatModeLambda() == REPEAT_MODE_ALL || repeatModeLambda() == REPEAT_MODE_ONE
-                        val repeatBackgroundAlpha =
-                            animateFloatAsState(targetValue = if (repeatHighlight) 0.9f else 0f)
-                        Box(
-                            modifier = Modifier
-                                .clickable(
-                                    onClick = {
-                                        Vibrator.click(context)
-                                        val targetMode = when (repeatModeLambda()) {
-                                            REPEAT_MODE_OFF -> {
-                                                REPEAT_MODE_ALL
-                                            }
-
-                                            REPEAT_MODE_ALL -> {
-                                                REPEAT_MODE_ONE
-                                            }
-
-                                            else -> {
-                                                REPEAT_MODE_OFF
-                                            }
-                                        }
-                                        mediaControl?.repeatMode = targetMode
-                                        mediaControl?.let { YosPlaybackService().setCustomButtons(it) }
-                                        repeatModeOnChanged(targetMode)
-                                    },
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() })
-                                .padding(start = 10.dp)
-                                .size(36.dp)
-                                .background(
-                                    Color.White.copy(alpha = repeatBackgroundAlpha.value),
-                                    shape = YosRoundedCornerShape(10.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            YosWrapper {
-                                AnimatedContent(targetState = repeatModeLambda(), transitionSpec = {
-                                    fadeIn() togetherWith fadeOut()
-                                }) {
-                                    when (it) {
-                                        REPEAT_MODE_ONE -> Icon(
-                                            painterResource(id = R.drawable.ic_nowplaying_repeatone),
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .size(dp),
-                                            tint = animateColorAsState(targetValue = if (repeatHighlight) Color.Black else Color.White).value
-                                        )
-
-                                        else -> Icon(
-                                            painterResource(id = R.drawable.ic_nowplaying_repeat),
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .size(dp),
-                                            tint = animateColorAsState(targetValue = if (repeatHighlight) Color.Black else Color.White).value
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                )
             }
 
 
@@ -1150,6 +1077,34 @@ private fun PlayingList(
                             item("blank_before") {
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
+                            val historySongs = ListenHistoryManager.recentlyPlayedSongs.value
+                                .filter { it.uri != thisMusicPlayingLambda()?.uri }
+                                .take(8)
+                            if (historySongs.isNotEmpty()) {
+                                item("history_header") {
+                                    QueueSectionHeader(
+                                        title = stringResource(id = R.string.queue_history),
+                                        onClear = { ListenHistoryManager.clear() },
+                                    )
+                                }
+                                items(
+                                    historySongs,
+                                    key = { music -> "hist-${music.uri}" }
+                                ) { music ->
+                                    QueueMusicListItem(
+                                        music = music,
+                                        reorderEnabled = false,
+                                        isDragging = false,
+                                        reorderHandleModifier = Modifier,
+                                        onMoveToNextQueue = null,
+                                        onRemove = null,
+                                    ) {
+                                        scope.launch(Dispatchers.IO) {
+                                            MediaController.prepare(music, MusicLibrary.songs)
+                                        }
+                                    }
+                                }
+                            }
                             if (nextInQueue.isNotEmpty()) {
                                 item("next_in_queue_header") {
                                     QueueSectionHeader(
@@ -1201,7 +1156,14 @@ private fun PlayingList(
 
                             if (upNext.isNotEmpty()) {
                                 item("up_next_header") {
-                                    QueueSectionHeader(title = stringResource(id = R.string.queue_up_next))
+                                    QueueSectionHeader(
+                                        title = stringResource(id = R.string.queue_up_next),
+                                        subtitle = if (SettingsLibrary.AutoplaySimilar) {
+                                            stringResource(id = R.string.queue_up_next_autoplay)
+                                        } else {
+                                            null
+                                        },
+                                    )
                                 }
 
                                 itemsIndexed(
@@ -1255,8 +1217,42 @@ private fun PlayingList(
 }
 
 @Composable
+private fun NowPlayingModePill(
+    modifier: Modifier = Modifier,
+    highlighted: Boolean,
+    icon: Int,
+    contentDescription: String?,
+    onClick: () -> Unit,
+) {
+    val backgroundAlpha = animateFloatAsState(targetValue = if (highlighted) 0.92f else 0.16f)
+    val iconTint = animateColorAsState(targetValue = if (highlighted) Color.Black else Color.White)
+    Box(
+        modifier = modifier
+            .height(44.dp)
+            .clickable(
+                onClick = onClick,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+            )
+            .background(
+                Color.White.copy(alpha = backgroundAlpha.value),
+                shape = YosRoundedCornerShape(14.dp),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(id = icon),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(28.dp),
+            tint = iconTint.value,
+        )
+    }
+}
+
+@Composable
 private fun QueueSectionHeader(
     title: String,
+    subtitle: String? = null,
     onClear: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -1269,13 +1265,23 @@ private fun QueueSectionHeader(
             .overlayEffect(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = title,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color.White,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White,
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White.copy(alpha = 0.45f),
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        }
 
         if (onClear != null) {
             Text(
@@ -1990,32 +1996,91 @@ private fun OverflowMenuBody(
     onPickPlaylist: () -> Unit,
     onPickSleepTimer: () -> Unit,
 ) {
+    val context = LocalContext.current
     val addToPlaylistLabel = stringResource(R.string.now_playing_overflow_add_to_playlist)
     val sleepTimerLabel = stringResource(R.string.now_playing_overflow_sleep_timer)
+    val shareSongLabel = stringResource(R.string.now_playing_overflow_share_song)
+    val shareLyricsLabel = stringResource(R.string.now_playing_overflow_share_lyrics)
+    val creditsLabel = stringResource(R.string.now_playing_overflow_credits)
+    val isFavorite = song?.let { FavPlayListLibrary.isFavorite(it) } == true
+    val favoriteLabel = stringResource(
+        if (isFavorite) R.string.now_playing_overflow_unfavorite
+        else R.string.now_playing_overflow_favorite
+    )
+    val hasLyrics = MediaViewModelObject.lrcEntries.value.any { line ->
+        line.any { it.second.isNotBlank() }
+    }
 
     // PRD FR-OM-13: highlight the Sleep Timer row when a timer is running.
     // No subtitle is shown — only the tint changes.
     val sleepTimerActive = SleepTimer.state.value is SleepTimerState.Active
     val accent = MaterialTheme.colorScheme.primary
 
-    val items = remember(
-        addToPlaylistLabel, sleepTimerLabel, sleepTimerActive, accent,
-        onPickPlaylist, onPickSleepTimer,
-    ) {
-        listOf(
-            ActionItem(
-                iconRes = R.drawable.ic_action_add,
-                label = addToPlaylistLabel,
-                onClick = onPickPlaylist,
-            ),
-            ActionItem(
-                iconRes = R.drawable.ic_setting_moon,
-                label = sleepTimerLabel,
-                tint = if (sleepTimerActive) accent else null,
-                onClick = onPickSleepTimer,
-            ),
-        )
-    }
+    val items = listOf(
+        ActionItem(
+            iconRes = R.drawable.ic_nowplaying_airplay,
+            label = shareSongLabel,
+            showChevron = false,
+            enabled = song?.uri != null,
+            onClick = {
+                shareNowPlayingSong(context, song)
+                onDismiss()
+            },
+        ),
+        ActionItem(
+            iconRes = R.drawable.ic_nowplaying_lyrics,
+            label = shareLyricsLabel,
+            showChevron = false,
+            enabled = hasLyrics,
+            onClick = {
+                shareNowPlayingLyrics(context, song)
+                onDismiss()
+            },
+        ),
+        ActionItem(
+            iconRes = R.drawable.songcredits_monogram_person,
+            label = creditsLabel,
+            enabled = song != null,
+            onClick = {
+                val albumName = song?.album?.takeIf { it.isNotBlank() }
+                if (albumName != null) {
+                    LibraryObject.setTargetAlbumName(albumName)
+                    navController.markNextNavigationFromNowPlaying()
+                    onDismiss()
+                    onOpenLibraryTarget(OverflowLibraryTarget.Album)
+                } else {
+                    onDismiss()
+                }
+            },
+        ),
+        ActionItem(
+            iconRes = R.drawable.ic_action_add,
+            label = addToPlaylistLabel,
+            onClick = onPickPlaylist,
+        ),
+        ActionItem(
+            iconRes = R.drawable.ic_setting_moon,
+            label = sleepTimerLabel,
+            tint = if (sleepTimerActive) accent else null,
+            onClick = onPickSleepTimer,
+        ),
+        ActionItem(
+            iconRes = if (isFavorite) R.drawable.ic_nowplaying_favorited else R.drawable.ic_nowplaying_favorite,
+            label = favoriteLabel,
+            showChevron = false,
+            enabled = song != null,
+            onClick = {
+                song?.let { target ->
+                    if (FavPlayListLibrary.isFavorite(target)) {
+                        FavPlayListLibrary.removeMusic(target)
+                    } else {
+                        FavPlayListLibrary.addMusic(target)
+                    }
+                }
+                onDismiss()
+            },
+        ),
+    )
 
     ActionSheetBody(
         header = if (song != null) {
@@ -2894,4 +2959,38 @@ fun formatTime(seconds: Long): String {
     val minutes = seconds / 60
     val secs = seconds % 60
     return "$minutes:${if (secs < 10) "0$secs" else "$secs"}"
+}
+
+private fun shareNowPlayingSong(context: Context, song: YosMediaItem?) {
+    val uri = song?.uri ?: return
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "audio/*"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_TITLE, song.title ?: song.artists.orEmpty())
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(send, context.getString(R.string.now_playing_overflow_share_song)))
+}
+
+private fun shareNowPlayingLyrics(context: Context, song: YosMediaItem?) {
+    val lines = MediaViewModelObject.lrcEntries.value
+        .flatten()
+        .map { it.second.trim() }
+        .filter { it.isNotBlank() }
+    if (lines.isEmpty()) return
+    val body = buildString {
+        append(song?.title.orEmpty())
+        if (!song?.artists.isNullOrBlank()) {
+            append(" — ")
+            append(song?.artists)
+        }
+        append("\n\n")
+        append(lines.joinToString("\n"))
+    }
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, body)
+        putExtra(Intent.EXTRA_SUBJECT, song?.title.orEmpty())
+    }
+    context.startActivity(Intent.createChooser(send, context.getString(R.string.now_playing_overflow_share_lyrics)))
 }

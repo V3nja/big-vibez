@@ -435,6 +435,60 @@ object MediaController {
         return true
     }
 
+    suspend fun appendToQueue(musicList: List<YosMediaItem>): Boolean {
+        if (musicList.isEmpty()) {
+            return false
+        }
+
+        val controller = mediaControl ?: return false
+        val currentQueue = currentQueueSnapshot(controller)
+
+        if (currentQueue.isEmpty()) {
+            prepare(
+                musicList.first(),
+                musicList,
+                play = false,
+                shuffleModeEnabled = queueShuffleEnabled.value
+            )
+            return true
+        }
+
+        val currentIndex = withContext(Dispatchers.Main) {
+            controller.currentMediaItemIndex.coerceAtLeast(0)
+        }
+        val insertAt = currentQueue.size
+        val updatedQueue = currentQueue + musicList
+
+        withContext(Dispatchers.Main) {
+            controller.addMediaItems(insertAt, musicList.map { it.toMediaItem() })
+        }
+
+        orderedPlayingMusicList.value = updatedQueue
+        syncQueueState(updatedQueue, currentIndex, consumeNextInQueue = false)
+        saveQueueState()
+        return true
+    }
+
+    suspend fun fillAutoplayIfNeeded() {
+        if (!SettingsLibrary.AutoplaySimilar) {
+            return
+        }
+        val controller = mediaControl ?: return
+        val hasNext = withContext(Dispatchers.Main) {
+            controller.hasNextMediaItem()
+        }
+        if (hasNext) {
+            return
+        }
+        val seed = musicPlaying.value ?: return
+        val exclude = orderedPlayingMusicList.value.mapNotNull { it.uri?.toString() }.toSet()
+        val similar = VibezSmart.similarTo(seed, MusicLibrary.songs, exclude, 12)
+        if (similar.isEmpty()) {
+            return
+        }
+        appendToQueue(similar)
+    }
+
     suspend fun playNext(musicList: List<YosMediaItem>): Boolean {
         return addToQueue(musicList)
     }
@@ -1375,6 +1429,11 @@ class YosPlaybackService : MediaSessionService() {
                     runCatching {
                         val hasNext = player.hasNextMediaItem()
                         SleepTimer.onMediaItemTransition(hasNext = hasNext)
+                        if (!hasNext && SettingsLibrary.AutoplaySimilar) {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                runCatching { fillAutoplayIfNeeded() }
+                            }
+                        }
                     }
 
                     super.onMediaItemTransition(mediaItem, reason)

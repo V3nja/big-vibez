@@ -31,6 +31,34 @@ object VibezSmart {
     const val RECENT = "Recently Added"
     const val NEVER = "Never Played"
 
+    fun similarTo(
+        seed: YosMediaItem,
+        library: List<YosMediaItem>,
+        exclude: Set<String>,
+        limit: Int = 12,
+    ): List<YosMediaItem> {
+        if (library.isEmpty()) return emptyList()
+        val seedUri = seed.uri?.toString()
+        val seedArtist = seed.artists.orEmpty().ifBlank { seed.albumArtists.orEmpty() }
+        val seedAlbum = seed.album.orEmpty()
+        val sameArtist = mutableListOf<YosMediaItem>()
+        val sameAlbum = mutableListOf<YosMediaItem>()
+        val rest = mutableListOf<YosMediaItem>()
+        library.forEach { item ->
+            val uri = item.uri?.toString() ?: return@forEach
+            if (uri == seedUri || uri in exclude) return@forEach
+            val artist = item.artists.orEmpty().ifBlank { item.albumArtists.orEmpty() }
+            when {
+                seedArtist.isNotBlank() && artist.equals(seedArtist, ignoreCase = true) -> sameArtist += item
+                seedAlbum.isNotBlank() && item.album.equals(seedAlbum, ignoreCase = true) -> sameAlbum += item
+                else -> rest += item
+            }
+        }
+        return (sameArtist.shuffled() + sameAlbum.shuffled() + rest.shuffled())
+            .distinctBy { it.uri?.toString() }
+            .take(limit)
+    }
+
     fun sync(context: Context, library: List<YosMediaItem>) {
         try {
             if (library.isEmpty()) return

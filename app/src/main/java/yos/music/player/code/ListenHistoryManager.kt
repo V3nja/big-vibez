@@ -51,6 +51,12 @@ object ListenHistoryManager
         persistHistory(currentHistory)
     }
 
+    fun clear()
+    {
+        recentlyPlayedSongs.value = emptyList()
+        mmkv.remove(HISTORY_KEY)
+    }
+
     private fun persistHistory(historyList: List<YosMediaItem>)
     {
         val json = gson.toJson(historyList)

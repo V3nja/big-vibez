@@ -227,6 +227,16 @@ object SettingsLibrary {
     )
 
     /**
+     * Apple Music-style autoplay: when the queue ends, keep playing similar songs from the library.
+     */
+    @Stable
+    var AutoplaySimilar by mutableDataSaverStateOf(
+        dataSaverInterface = SettingsSaver,
+        key = "vibez_autoplay_similar",
+        initialValue = true
+    )
+
+    /**
      * 媒体通知-额外的媒体图标
      */
     @Stable

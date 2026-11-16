@@ -237,7 +237,15 @@
     <string name="queue_added_toast">Added to queue</string>
     <string name="queue_next_in_queue">Queue</string>
     <string name="queue_up_next">Continue Playing</string>
+    <string name="queue_up_next_autoplay">Autoplaying similar music</string>
+    <string name="queue_history">History</string>
     <string name="queue_clear">Clear</string>
+    <string name="now_playing_autoplay">Autoplay</string>
+    <string name="now_playing_overflow_share_song">Share Song</string>
+    <string name="now_playing_overflow_share_lyrics">Share Lyrics…</string>
+    <string name="now_playing_overflow_credits">View Credits</string>
+    <string name="now_playing_overflow_favorite">Favorite</string>
+    <string name="now_playing_overflow_unfavorite">Favorited</string>
     <string name="playlist_delete_undo_message">Deleted “%1$s”</string>
     <string name="playlist_delete_undo_action">Undo</string>
     <string name="playlist_pin_toast">Pinned “%1$s”</string>

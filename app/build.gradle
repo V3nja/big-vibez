@@ -35,8 +35,8 @@ android {
         applicationId "yos.music.player"
         minSdk 23
         targetSdk 34
-        versionCode 3
-        versionName "1.0.0 V3NJA Edition"
+        versionCode 5
+        versionName "1.0.2 V3NJA Edition"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

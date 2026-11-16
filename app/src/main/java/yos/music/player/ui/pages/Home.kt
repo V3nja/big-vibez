@@ -119,9 +119,18 @@ fun RecommendCard(imageViewModel: ImageViewModel) {
             Text(
                 text = stringResource(id = R.string.home_recommend_title),
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                lineHeight = 20.sp,
+                fontSize = 22.sp,
+                lineHeight = 24.sp,
                 modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Text(
+                text = stringResource(id = R.string.home_recommend_subtitle),
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                lineHeight = 16.sp,
+                modifier = Modifier
+                    .padding(horizontal = 20.dp, vertical = 4.dp)
+                    .alpha(0.45f)
             )
 
             val scope = rememberCoroutineScope()
