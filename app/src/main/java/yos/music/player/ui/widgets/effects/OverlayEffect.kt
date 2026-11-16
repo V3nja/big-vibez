@@ -1,5 +1,6 @@
 package yos.music.player.ui.widgets.effects
 
+import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
@@ -15,7 +16,10 @@ import androidx.compose.ui.graphics.Paint
  * —— By Yos-X
  */
 @Composable
-fun Modifier.overlayEffect() = this.drawWithCache {
+fun Modifier.overlayEffect(): Modifier {
+    // saveLayer + BlendMode.Plus paints black on Mali / HiOS (Android 10).
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return this
+    return this.drawWithCache {
     val overlayPaint = Paint().apply {
         blendMode = BlendMode.Plus
     }
@@ -29,5 +33,6 @@ fun Modifier.overlayEffect() = this.drawWithCache {
         drawContent()
 
         canvas.restore()
+    }
     }
 }

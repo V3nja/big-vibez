@@ -15,12 +15,10 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.core.view.WindowCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
@@ -197,45 +195,16 @@ class MainActivity : BaseActivity() {
         // First-run ModalBottomSheet (screen-corner) was a second trap on
         // Android 10 / HiOS: fullscreen black dialog, back disabled, so
         // CheckAndRequestPermission never ran. Keep the default 30 and skip it.
-        runCatching {
-            if (!SettingsLibrary.ScreenCornerSet) {
-                SettingsLibrary.ScreenCornerSet = true
-            }
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                SettingsLibrary.BarBlurEffect = false
-            }
-        }
-        Toast.makeText(this, "Big Vibez 1.0.3", Toast.LENGTH_LONG).show()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            enableEdgeToEdge()
-        } else {
-            // enableEdgeToEdge + old accompanist insets = 0-size ComposeView on API 29.
-            WindowCompat.setDecorFitsSystemWindows(window, true)
-            setContentView(R.layout.boot_fallback)
-        }
-        val startUi = {
-            try {
-                setComposeUi()
-            } catch (t: Throwable) {
-                CrashActivity.startActivity(this, t.stackTraceToString())
-            }
+        if (!SettingsLibrary.ScreenCornerSet) {
+            SettingsLibrary.ScreenCornerSet = true
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            window.decorView.post(startUi)
-        } else {
-            startUi()
+            SettingsLibrary.BarBlurEffect = false
         }
-    }
-
-    @Suppress("DEPRECATION")
-    @OptIn(
-        ExperimentalAnimationApi::class,
-        ExperimentalHazeMaterialsApi::class, ExperimentalSharedTransitionApi::class
-    )
-    private fun setComposeUi() {
+        enableEdgeToEdge()
         setContent {
             YosMusicTheme(dynamicColor = SettingsLibrary.CustomTheme == "Material You") {
-                OptionalWindowInsets {
+                ProvideWindowInsets {
                     val context = LocalContext.current
                     val density = LocalDensity.current
 
@@ -394,13 +363,15 @@ class MainActivity : BaseActivity() {
                                         //compositingStrategy = CompositingStrategy.Offscreen
                                         //transformOrigin = TransformOrigin(0.5f, 1f)
 
-                                        if (yosBottomSheetConfig.thisShowCorner && !yosBottomSheetConfig.RTCorner) {
-                                            compositingStrategy = CompositingStrategy.Offscreen
-                                            clip = true
-                                            shape = YosRoundedCornerShape(screenCorner.dp)
-                                        } else {
-                                            compositingStrategy = CompositingStrategy.ModulateAlpha
-                                            clip = false
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            if (yosBottomSheetConfig.thisShowCorner && !yosBottomSheetConfig.RTCorner) {
+                                                compositingStrategy = CompositingStrategy.Offscreen
+                                                clip = true
+                                                shape = YosRoundedCornerShape(screenCorner.dp)
+                                            } else {
+                                                compositingStrategy = CompositingStrategy.ModulateAlpha
+                                                clip = false
+                                            }
                                         }
 
                                         if (!yosBottomSheetConfig.barShowCorner) {
@@ -818,19 +789,21 @@ class MainActivity : BaseActivity() {
                                             .graphicsLayer {
                                                 //translationY = ((parentHeight.intValue - miniPlayerHeightPx) * (1 - yosBottomSheetConfig.progress))
 
-                                                if (yosBottomSheetConfig.barShowCorner) {
-                                                    compositingStrategy = CompositingStrategy.Offscreen
-                                                    clip = true
-                                                    shape = YosRoundedCornerShape(
-                                                        roundSize = yosBottomSheetConfig.barShapeValue.dp,
-                                                        mSize = Size(
-                                                            width = size.width,
-                                                            height = (miniPlayerHeightPx + (parentHeight.intValue - miniPlayerHeightPx) * yosBottomSheetConfig.progress)
+                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                                    if (yosBottomSheetConfig.barShowCorner) {
+                                                        compositingStrategy = CompositingStrategy.Offscreen
+                                                        clip = true
+                                                        shape = YosRoundedCornerShape(
+                                                            roundSize = yosBottomSheetConfig.barShapeValue.dp,
+                                                            mSize = Size(
+                                                                width = size.width,
+                                                                height = (miniPlayerHeightPx + (parentHeight.intValue - miniPlayerHeightPx) * yosBottomSheetConfig.progress)
+                                                            )
                                                         )
-                                                    )
-                                                } else {
-                                                    compositingStrategy = CompositingStrategy.ModulateAlpha
-                                                    clip = false
+                                                    } else {
+                                                        compositingStrategy = CompositingStrategy.ModulateAlpha
+                                                        clip = false
+                                                    }
                                                 }
                                             }
                                             .draggable(
@@ -969,8 +942,10 @@ class MainActivity : BaseActivity() {
                                                         Modifier
                                                             .fillMaxSize()
                                                             .graphicsLayer {
-                                                                compositingStrategy =
-                                                                    CompositingStrategy.ModulateAlpha
+                                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                                                    compositingStrategy =
+                                                                        CompositingStrategy.ModulateAlpha
+                                                                }
                                                                 this.alpha =
                                                                     yosBottomSheetConfig.menuAlpha
                                                             }
@@ -1339,15 +1314,6 @@ class MainActivity : BaseActivity() {
                     /*}*/
                 }
             }
-    }
-}
-
-@Composable
-private fun OptionalWindowInsets(content: @Composable () -> Unit) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        ProvideWindowInsets(content = content)
-    } else {
-        content()
     }
 }
 
