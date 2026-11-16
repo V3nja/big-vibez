@@ -65,9 +65,52 @@ class CrashActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //WindowCompat.setDecorFitsSystemWindows(window, false)
-        //enableEdgeToEdge()
         val crashInfo = getCrashInfo(true, intent)
+        // Compose crash UI was itself black on Android 10. Use plain views.
+        val density = resources.displayMetrics.density
+        val pad = (16 * density).toInt()
+        val root = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(0xFF111111.toInt())
+            setPadding(pad, pad * 2, pad, pad)
+        }
+        root.addView(android.widget.TextView(this).apply {
+            text = "Big Vibez crashed"
+            setTextColor(0xFFFA2D55.toInt())
+            textSize = 22f
+            setPadding(0, 0, 0, pad)
+        })
+        val body = android.widget.TextView(this).apply {
+            text = crashInfo
+            setTextColor(0xFFFFFFFF.toInt())
+            textSize = 12f
+            setTextIsSelectable(true)
+            typeface = android.graphics.Typeface.MONOSPACE
+        }
+        root.addView(android.widget.ScrollView(this).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f,
+            )
+            addView(body)
+        })
+        root.addView(android.widget.Button(this).apply {
+            text = "Copy details"
+            setOnClickListener {
+                ClipboardUtils.copyText(crashInfo)
+                Toast.makeText(this@CrashActivity, "Copied", Toast.LENGTH_SHORT).show()
+            }
+        })
+        root.addView(android.widget.Button(this).apply {
+            text = "Restart"
+            setOnClickListener {
+                startActivity(Intent(this@CrashActivity, MainActivity::class.java))
+                finish()
+            }
+        })
+        setContentView(root)
+        return
         setContent {
             YosMusicTheme {
                 ProvideWindowInsets {

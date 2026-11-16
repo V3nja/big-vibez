@@ -15,10 +15,12 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
@@ -195,16 +197,45 @@ class MainActivity : BaseActivity() {
         // First-run ModalBottomSheet (screen-corner) was a second trap on
         // Android 10 / HiOS: fullscreen black dialog, back disabled, so
         // CheckAndRequestPermission never ran. Keep the default 30 and skip it.
-        if (!SettingsLibrary.ScreenCornerSet) {
-            SettingsLibrary.ScreenCornerSet = true
+        runCatching {
+            if (!SettingsLibrary.ScreenCornerSet) {
+                SettingsLibrary.ScreenCornerSet = true
+            }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                SettingsLibrary.BarBlurEffect = false
+            }
+        }
+        Toast.makeText(this, "Big Vibez 1.0.3", Toast.LENGTH_LONG).show()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            enableEdgeToEdge()
+        } else {
+            // enableEdgeToEdge + old accompanist insets = 0-size ComposeView on API 29.
+            WindowCompat.setDecorFitsSystemWindows(window, true)
+            setContentView(R.layout.boot_fallback)
+        }
+        val startUi = {
+            try {
+                setComposeUi()
+            } catch (t: Throwable) {
+                CrashActivity.startActivity(this, t.stackTraceToString())
+            }
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            SettingsLibrary.BarBlurEffect = false
+            window.decorView.post(startUi)
+        } else {
+            startUi()
         }
-        enableEdgeToEdge()
+    }
+
+    @Suppress("DEPRECATION")
+    @OptIn(
+        ExperimentalAnimationApi::class,
+        ExperimentalHazeMaterialsApi::class, ExperimentalSharedTransitionApi::class
+    )
+    private fun setComposeUi() {
         setContent {
             YosMusicTheme(dynamicColor = SettingsLibrary.CustomTheme == "Material You") {
-                ProvideWindowInsets {
+                OptionalWindowInsets {
                     val context = LocalContext.current
                     val density = LocalDensity.current
 
@@ -1308,6 +1339,15 @@ class MainActivity : BaseActivity() {
                     /*}*/
                 }
             }
+    }
+}
+
+@Composable
+private fun OptionalWindowInsets(content: @Composable () -> Unit) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        ProvideWindowInsets(content = content)
+    } else {
+        content()
     }
 }
 
