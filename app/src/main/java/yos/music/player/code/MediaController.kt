@@ -1431,7 +1431,7 @@ class YosPlaybackService : MediaSessionService() {
                         SleepTimer.onMediaItemTransition(hasNext = hasNext)
                         if (!hasNext && SettingsLibrary.AutoplaySimilar) {
                             CoroutineScope(Dispatchers.IO).launch {
-                                runCatching { fillAutoplayIfNeeded() }
+                                runCatching { yos.music.player.code.MediaController.fillAutoplayIfNeeded() }
                             }
                         }
                     }
